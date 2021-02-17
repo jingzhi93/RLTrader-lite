@@ -131,6 +131,7 @@ class BTCTradingGraph:
 
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
+            # print(trade)
             if trade['step'] in step_range:
                 date = date2num(self.df['Timestamp'].values[trade['step']])
                 high = self.df['High'].values[trade['step']]

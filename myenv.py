@@ -42,6 +42,7 @@ class CryptoEnv(gym.Env):
     def _reset_session(self):
         self.current_idx = 0
         if self.serial:
+            self.frame_start = 0
             self.step_left = len(self.df) - 1
             self.active_df = self.df.iloc[self.current_idx: ][self.features] #[days, features]
         else:
@@ -151,13 +152,21 @@ class CryptoEnv(gym.Env):
         return obs, reward, done, {}
 
     def render(self, mode='human', close=False):
-        # Render the environment to the screen
         profit = self.net_worth - self.initial_balance
-        print('-' * 30)
-        print(f'Step: {self.current_idx}')
-        print(f'Balance: {self.balance}')
-        print(f'BTC held: {self.btc_held} ')
-        print(f'Net worth: {self.net_worth})')
-        print(f'Profit: {profit}')
+        if mode == 'human':
+            if self.viewer == None:
+                self.viewer = BTCTradingGraph(self.df)
+            self.viewer.render(self.frame_start + self.current_idx,
+                               self.net_worth,
+                               self.trades,
+                               window_size=self.lookback_window_size)
+        elif mode == 'system':
+            # Render the environment to the screen
+            print('-' * 30)
+            print(f'Step: {self.frame_start + self.current_idx}')
+            print(f'Balance: {self.balance}')
+            print(f'BTC held: {self.btc_held} ')
+            print(f'Net worth: {self.net_worth}')
+            print(f'Profit: {profit}')
         return profit
 
