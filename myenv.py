@@ -5,7 +5,7 @@ from gym import spaces
 import random
 import pandas as pd
 from gym import spaces
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from render_env_ori import BTCTradingGraph
 
 MAX_TRADING_SESSION = 90
@@ -22,7 +22,7 @@ class CryptoEnv(gym.Env):
         self.lookback_window_size = lookback_window_size
         self.initial_balance = initial_balance
         self.serial = serial
-        self.scaler = MinMaxScaler()
+        self.min_max_scaler = MinMaxScaler()
         self.df = self._prepare_features(df)
 
         # action space, buy, sell, hold
@@ -66,8 +66,9 @@ class CryptoEnv(gym.Env):
             [prices_df[f'Volume_lag_{i}'] for i in range(1, self.lookback_window_size+1)]]
         )
         prices_arr = np.hstack((curr_prices_arr, history_prices_arr))
-        scaled_history = self.scaler.fit_transform(self.account_history)
-        obs = np.append(prices_arr, scaled_history[:, -(self.lookback_window_size + 1):], axis=0)
+        prices_arr_norm = prices_arr / prices_arr[:, -1].reshape(len(prices_arr[:, -1]), -1)
+        scaled_history = self.min_max_scaler.fit_transform(self.account_history)
+        obs = np.append(prices_arr_norm, scaled_history[:, -(self.lookback_window_size + 1):], axis=0)
         return obs
 
 
@@ -128,7 +129,7 @@ class CryptoEnv(gym.Env):
 
 
     def step(self, action):
-        print(action)
+        # print(action)
         done = False
         current_price = self._get_current_price()
         self._take_action(action, current_price)
@@ -153,11 +154,10 @@ class CryptoEnv(gym.Env):
         # Render the environment to the screen
         profit = self.net_worth - self.initial_balance
         print('-' * 30)
-        print(f'Step: {self.current_step}')
+        print(f'Step: {self.current_idx}')
         print(f'Balance: {self.balance}')
-        print(f'Shares held: {self.shares_held} (Total sold: {self.total_shares_sold})')
-        print(f'Avg cost for held shares: {self.cost_basis} (Total sales value: {self.total_sales_value})')
-        print(f'Net worth: {self.net_worth} (Max net worth: {self.max_net_worth})')
+        print(f'BTC held: {self.btc_held} ')
+        print(f'Net worth: {self.net_worth})')
         print(f'Profit: {profit}')
         return profit
 
