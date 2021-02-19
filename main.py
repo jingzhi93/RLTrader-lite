@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def train(path='data/train/btc_price_yahoo_140917_191231_upsample_2018.csv'):
+def train(path='data/train/btc_price_yahoo_140917_191231.csv'):
     df_train = pd.read_csv(path)
     df_train.dropna(axis=0, inplace=True)
     env = DummyVecEnv([lambda: CryptoEnv(df_train, serial=False)])
@@ -49,6 +49,6 @@ if __name__ == '__main__':
     #true test (unseen)
     validate_and_render('data/test/btc_price_yahoo_200101_210103.csv', model, render_mode='system')
     #test historical year
-    validate_and_render('data/test/btc_price_yahoo_170101_171231.csv', model, render_mode='human')
-    validate_and_render('data/test/btc_price_yahoo_180101_181231.csv', model, render_mode='human')
-    validate_and_render('data/test/btc_price_yahoo_190101_191231.csv', model, render_mode='human')
+    validate_and_render('data/test/btc_price_yahoo_170101_171231.csv', model, render_mode='system')
+    validate_and_render('data/test/btc_price_yahoo_180101_181231.csv', model, render_mode='system')
+    validate_and_render('data/test/btc_price_yahoo_190101_191231.csv', model, render_mode='system')

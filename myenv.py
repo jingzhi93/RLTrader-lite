@@ -23,18 +23,23 @@ class CryptoEnv(gym.Env):
         self.initial_balance = initial_balance
         self.serial = serial
         self.min_max_scaler = MinMaxScaler()
+
+        self.features = ['Open', 'High', 'Low', 'Close', 'Volume']
+        self.complete_features_with_lags = []
         self.df = self._prepare_features(df)
 
         # action space, buy, sell, hold
         self.action_space = spaces.MultiDiscrete([3, 10])
         self.observation_space = spaces.Box(low=0, high=1, shape=(10, lookback_window_size + 1), dtype=np.float16)
-        self.features = [col for col in self.df.columns if col not in ['index', 'Timestamp']]
+
 
     def _prepare_features(self, df):
         df_final = df.copy()
-        for ohlcv in ['Open', 'High', 'Low', 'Close', 'Volume']:
+        for feature in self.features:
             for lag in range(1, self.lookback_window_size+1):
-                df_final[f'{ohlcv}_lag_{lag}'] = df_final[ohlcv].shift(lag)
+                df_final[f'{feature}_lag_{lag}'] = df_final[feature].shift(lag)
+                self.complete_features_with_lags.append(f'{feature}_lag_{lag}')
+        self.complete_features_with_lags += self.features
         df_final.dropna(axis=0, inplace=True)
         df_final = df_final.reset_index()
         return df_final
@@ -44,27 +49,20 @@ class CryptoEnv(gym.Env):
         if self.serial:
             self.frame_start = 0
             self.step_left = len(self.df) - 1
-            self.active_df = self.df.iloc[self.current_idx: ][self.features] #[days, features]
+            self.active_df = self.df.iloc[self.current_idx: ] #[days, features]
         else:
             self.step_left = np.random.randint(1, MAX_TRADING_SESSION) #define a trading session, maximum 3 months
             self.frame_start = np.random.randint(0, len(self.df) - self.step_left) #randomly create a starting point
             self.active_df = self.df.iloc[self.frame_start: self.frame_start + self.step_left] #[days, features]
 
     def _next_observation(self):
-        prices_df = self.active_df[self.features].iloc[self.current_idx]
+        prices_df = self.active_df[self.complete_features_with_lags].iloc[self.current_idx]
         curr_prices_arr = np.array(
-            [[prices_df['Open']],
-             [prices_df['High']],
-             [prices_df['Low']],
-             [prices_df['Close']],
-             [prices_df['Volume']]]
+            [[prices_df[feature]] for feature in self.features]
         )
+
         history_prices_arr = np.array(
-            [[prices_df[f'Open_lag_{i}'] for i in range(1, self.lookback_window_size+1)],
-            [prices_df[f'High_lag_{i}'] for i in range(1, self.lookback_window_size+1)],
-            [prices_df[f'Low_lag_{i}'] for i in range(1, self.lookback_window_size+1)],
-            [prices_df[f'Close_lag_{i}'] for i in range(1, self.lookback_window_size+1)],
-            [prices_df[f'Volume_lag_{i}'] for i in range(1, self.lookback_window_size+1)]]
+            [[prices_df[f'{ohlcv}_lag_{i}'] for i in range(1, self.lookback_window_size + 1)] for ohlcv in self.features]
         )
         prices_arr = np.hstack((curr_prices_arr, history_prices_arr))
         prices_arr_norm = prices_arr / prices_arr[:, -1].reshape(len(prices_arr[:, -1]), -1)
