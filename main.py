@@ -10,14 +10,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def train(path='data/train/btc_price_yahoo_140917_191231.csv'):
+def train(path='data/train/btc_price_yahoo_140917_191231_upsample_2018.csv'):
     df_train = pd.read_csv(path)
     df_train.dropna(axis=0, inplace=True)
     env = DummyVecEnv([lambda: CryptoEnv(df_train, serial=False)])
     # Instanciate the agent
     model = PPO2(MlpPolicy, env, seed=42, verbose=1)
     # Train the agent
-    model.learn(total_timesteps=int(2e4))
+    model.learn(total_timesteps=int(4e4))
     model.save('PPO2_CRYPTO')
     return model
 
