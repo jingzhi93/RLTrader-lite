@@ -7,6 +7,7 @@ import pandas as pd
 from gym import spaces
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from render_env_ori import BTCTradingGraph
+from features_adder import FeaturesAdder
 
 MAX_TRADING_SESSION = 90
 NUM_FEATURES = 5
@@ -24,24 +25,20 @@ class CryptoEnv(gym.Env):
         self.serial = serial
         self.min_max_scaler = MinMaxScaler()
 
-        self.features = ['Open', 'High', 'Low', 'Close', 'Volume']
-        self.complete_features_with_lags = []
+        self.features = None
+        self.complete_features_with_lags = None
         self.df = self._prepare_features(df)
 
         # action space, buy, sell, hold
         self.action_space = spaces.MultiDiscrete([3, 10])
-        self.observation_space = spaces.Box(low=0, high=1, shape=(10, lookback_window_size + 1), dtype=np.float16)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(len(self.features)+5, lookback_window_size + 1), dtype=np.float16)
 
 
     def _prepare_features(self, df):
-        df_final = df.copy()
-        for feature in self.features:
-            for lag in range(1, self.lookback_window_size+1):
-                df_final[f'{feature}_lag_{lag}'] = df_final[feature].shift(lag)
-                self.complete_features_with_lags.append(f'{feature}_lag_{lag}')
-        self.complete_features_with_lags += self.features
-        df_final.dropna(axis=0, inplace=True)
-        df_final = df_final.reset_index()
+        features_adder = FeaturesAdder(df, self.lookback_window_size)
+        df_final = features_adder.get_processed_df()
+        self.features = features_adder.get_features()
+        self.complete_features_with_lags = features_adder.get_complete_features_with_lags()
         return df_final
 
     def _reset_session(self):
@@ -60,9 +57,8 @@ class CryptoEnv(gym.Env):
         curr_prices_arr = np.array(
             [[prices_df[feature]] for feature in self.features]
         )
-
         history_prices_arr = np.array(
-            [[prices_df[f'{ohlcv}_lag_{i}'] for i in range(1, self.lookback_window_size + 1)] for ohlcv in self.features]
+            [[prices_df[f'{feature}_lag_{i}'] for i in range(1, self.lookback_window_size + 1)] for feature in self.features]
         )
         prices_arr = np.hstack((curr_prices_arr, history_prices_arr))
         prices_arr_norm = prices_arr / prices_arr[:, -1].reshape(len(prices_arr[:, -1]), -1)

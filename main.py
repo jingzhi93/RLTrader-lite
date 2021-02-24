@@ -50,5 +50,5 @@ if __name__ == '__main__':
     validate_and_render('data/test/btc_price_yahoo_200101_210103.csv', model, render_mode='system')
     #test historical year
     validate_and_render('data/test/btc_price_yahoo_170101_171231.csv', model, render_mode='system')
-    validate_and_render('data/test/btc_price_yahoo_180101_181231.csv', model, render_mode='system')
+    validate_and_render('data/test/btc_price_yahoo_180101_181231.csv', model, render_mode='human')
     validate_and_render('data/test/btc_price_yahoo_190101_191231.csv', model, render_mode='system')
